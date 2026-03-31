@@ -1,0 +1,90 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # Triggers on version tags like v1.0.0
+
+permissions:
+  contents: write  # Required to create GitHub Releases and upload assets
+
+jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download Ollama Windows binary
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force resources/win32 | Out-Null
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip" -OutFile "$env:TEMP\ollama.zip"
+          Expand-Archive "$env:TEMP\ollama.zip" -DestinationPath "$env:TEMP\ollama-win" -Force
+          Copy-Item "$env:TEMP\ollama-win\ollama.exe" resources/win32/ollama.exe
+
+      - name: Build & publish Windows installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm build:win
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HomeMind-Windows
+          path: dist/*.exe
+
+  build-mac:
+    name: Build macOS installer
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download Ollama macOS binary
+        run: |
+          mkdir -p resources/darwin
+          curl -L "https://github.com/ollama/ollama/releases/latest/download/ollama-darwin" -o resources/darwin/ollama
+          chmod +x resources/darwin/ollama
+
+      - name: Build & publish macOS DMG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing is disabled (notarize: false in electron-builder.yml).
+          # To enable, add CSC_LINK and CSC_KEY_PASSWORD secrets with your
+          # Apple Developer certificate.
+        run: pnpm build:mac
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HomeMind-macOS
+          path: dist/*.dmg

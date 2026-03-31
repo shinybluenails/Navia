@@ -1,0 +1,9 @@
+node_modules
+dist
+out
+.DS_Store
+*.log*
+
+# Ollama binaries — downloaded by CI and locally via scripts, not stored in git
+resources/win32/
+resources/darwin/
