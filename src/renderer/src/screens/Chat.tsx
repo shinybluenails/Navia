@@ -1,23 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Trash2, RefreshCw } from 'lucide-react'
+import { Send, RefreshCw } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
 import type { Settings } from '@renderer/hooks/useSettings'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-}
+import type { ChatSession, ChatMessage } from '@renderer/hooks/useChats'
 
 interface ChatProps {
   settings: Settings
+  activeChat: ChatSession | null
+  onUpdateChat: (id: string, updates: Partial<Omit<ChatSession, 'id' | 'createdAt'>>) => void
+  onCreateChat: (model?: string) => string
 }
 
-export function Chat({ settings }: ChatProps): JSX.Element {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [selectedModel, setSelectedModel] = useState('')
+export function Chat({ settings, activeChat, onUpdateChat, onCreateChat }: ChatProps): JSX.Element {
+  const [selectedModel, setSelectedModel] = useState(activeChat?.model ?? '')
   const [models, setModels] = useState<string[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
@@ -26,6 +22,15 @@ export function Chat({ settings }: ChatProps): JSX.Element {
   const streamRef = useRef('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [input, setInput] = useState('')
+
+  // Sync selected model when switching chats
+  useEffect(() => {
+    setSelectedModel(activeChat?.model ?? '')
+    setStreamingContent('')
+    streamRef.current = ''
+    // Reset input only when the active chat changes identity
+  }, [activeChat?.id])
 
   const loadModels = useCallback(async () => {
     try {
@@ -33,13 +38,20 @@ export function Chat({ settings }: ChatProps): JSX.Element {
       const names = list.map((m) => m.name)
       setModels(names)
       if (names.length > 0) {
-        setSelectedModel((prev) => (names.includes(prev) ? prev : names[0]))
+        setSelectedModel((prev) => {
+          const resolved = names.includes(prev) ? prev : names[0]
+          // Persist the resolved model onto the active chat if it changed
+          if (activeChat && resolved !== activeChat.model) {
+            onUpdateChat(activeChat.id, { model: resolved })
+          }
+          return resolved
+        })
       }
       setOllamaError(null)
     } catch {
       setOllamaError('Could not connect to Ollama. It may still be starting up.')
     }
-  }, [])
+  }, [activeChat, onUpdateChat])
 
   useEffect(() => {
     loadModels()
@@ -48,23 +60,51 @@ export function Chat({ settings }: ChatProps): JSX.Element {
   // Auto-scroll on new messages or streaming updates
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'instant' })
-  }, [messages, streamingContent])
+  }, [activeChat?.messages, streamingContent])
 
   // Auto-resize textarea
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     setInput(e.target.value)
     e.target.style.height = 'auto'
     e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'
   }
 
-  const handleSend = async () => {
+  const handleModelChange = (model: string): void => {
+    setSelectedModel(model)
+    if (activeChat) {
+      onUpdateChat(activeChat.id, { model })
+    }
+  }
+
+  const handleSend = async (): Promise<void> => {
     if (!selectedModel || !input.trim() || isStreaming) return
 
-    const content = input.trim()
-    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content }
-    const newMessages = [...messages, userMsg]
+    // Ensure there is an active chat to write into
+    let chatId = activeChat?.id ?? ''
+    let existingMessages: ChatMessage[] = activeChat?.messages ?? []
 
-    setMessages(newMessages)
+    if (!chatId) {
+      chatId = onCreateChat(selectedModel)
+      existingMessages = []
+    }
+
+    const content = input.trim()
+    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content }
+    const updatedMessages = [...existingMessages, userMsg]
+
+    // Auto-title from the first user message
+    const isFirstMessage = existingMessages.length === 0
+    const title = isFirstMessage
+      ? content.slice(0, 50) + (content.length > 50 ? '…' : '')
+      : undefined
+
+    // Persist the user message (and optional title) immediately
+    onUpdateChat(chatId, {
+      messages: updatedMessages,
+      model: selectedModel,
+      ...(title ? { title } : {})
+    })
+
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setIsStreaming(true)
@@ -75,7 +115,7 @@ export function Chat({ settings }: ChatProps): JSX.Element {
       ...(settings.systemPrompt
         ? [{ role: 'system' as const, content: settings.systemPrompt }]
         : []),
-      ...newMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+      ...updatedMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
     ]
 
     const cleanupToken = window.ollama.onChatToken((token) => {
@@ -89,20 +129,19 @@ export function Chat({ settings }: ChatProps): JSX.Element {
         num_ctx: settings.numCtx,
         ...(settings.numGpu !== 0 ? { num_gpu: settings.numGpu } : {})
       })
-      const finalContent = streamRef.current
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', content: finalContent }
-      ])
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: streamRef.current
+      }
+      onUpdateChat(chatId, { messages: [...updatedMessages, assistantMsg] })
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: `⚠️ Error: ${String(err)}`
-        }
-      ])
+      const errorMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `⚠️ Error: ${String(err)}`
+      }
+      onUpdateChat(chatId, { messages: [...updatedMessages, errorMsg] })
     } finally {
       cleanupToken()
       setStreamingContent('')
@@ -111,18 +150,14 @@ export function Chat({ settings }: ChatProps): JSX.Element {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
   }
 
-  const handleClear = () => {
-    setMessages([])
-    setStreamingContent('')
-    streamRef.current = ''
-  }
+  const messages = activeChat?.messages ?? []
 
   return (
     <div className="flex flex-col h-full">
@@ -131,7 +166,7 @@ export function Chat({ settings }: ChatProps): JSX.Element {
         {models.length > 0 ? (
           <select
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
+            onChange={(e) => handleModelChange(e.target.value)}
             disabled={isStreaming}
             className="flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
           >
@@ -154,15 +189,6 @@ export function Chat({ settings }: ChatProps): JSX.Element {
           title="Refresh models"
         >
           <RefreshCw className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleClear}
-          disabled={isStreaming || messages.length === 0}
-          title="Clear conversation"
-        >
-          <Trash2 className="w-4 h-4" />
         </Button>
       </div>
 
@@ -187,9 +213,7 @@ export function Chat({ settings }: ChatProps): JSX.Element {
               </div>
             ) : (
               <div className="text-center space-y-1">
-                <p className="text-foreground text-sm font-medium">
-                  Start a conversation
-                </p>
+                <p className="text-foreground text-sm font-medium">Start a conversation</p>
                 <p className="text-muted-foreground text-xs">
                   Type a message below and press Enter.
                 </p>
