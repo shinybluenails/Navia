@@ -5,6 +5,7 @@ import { Models } from '@renderer/screens/Models'
 import { SettingsScreen } from '@renderer/screens/Settings'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useChats } from '@renderer/hooks/useChats'
+import { useTheme } from '@renderer/hooks/useTheme'
 import { Button } from '@renderer/components/ui/button'
 
 function App(): JSX.Element {
@@ -12,6 +13,7 @@ function App(): JSX.Element {
   const { settings, updateSettings } = useSettings()
   const { chats, activeChatId, activeChat, createChat, deleteChat, selectChat, updateChat } =
     useChats()
+  const { theme, setTheme } = useTheme()
   const [updateReady, setUpdateReady] = useState(false)
 
   useEffect(() => {
@@ -62,7 +64,12 @@ function App(): JSX.Element {
           )}
           {screen === 'models' && <Models />}
           {screen === 'settings' && (
-            <SettingsScreen settings={settings} updateSettings={updateSettings} />
+            <SettingsScreen
+              settings={settings}
+              updateSettings={updateSettings}
+              theme={theme}
+              setTheme={setTheme}
+            />
           )}
         </main>
       </div>

@@ -4,16 +4,44 @@ import { Slider } from '@renderer/components/ui/slider'
 import { Input } from '@renderer/components/ui/input'
 import { Separator } from '@renderer/components/ui/separator'
 import { Button } from '@renderer/components/ui/button'
+import { cn } from '@renderer/lib/utils'
 import type { Settings } from '@renderer/hooks/useSettings'
+import type { Theme } from '@renderer/hooks/useTheme'
 
 const CTX_PRESETS = [512, 1024, 2048, 4096, 8192, 16384, 32768]
+
+const THEMES: { id: Theme; label: string; bg: string; primary: string; card: string }[] = [
+  {
+    id: 'dark',
+    label: 'Dark',
+    bg: 'hsl(222.2 84% 4.9%)',
+    card: 'hsl(220 40% 7%)',
+    primary: 'hsl(210 40% 98%)'
+  },
+  {
+    id: 'light',
+    label: 'Light',
+    bg: 'hsl(0 0% 100%)',
+    card: 'hsl(210 20% 98%)',
+    primary: 'hsl(222.2 47.4% 30%)'
+  },
+  {
+    id: 'cherry',
+    label: 'Cherry Blossom',
+    bg: 'hsl(345 60% 98%)',
+    card: 'hsl(345 45% 96%)',
+    primary: 'hsl(340 65% 52%)'
+  }
+]
 
 interface SettingsProps {
   settings: Settings
   updateSettings: (updates: Partial<Settings>) => void
+  theme: Theme
+  setTheme: (t: Theme) => void
 }
 
-export function SettingsScreen({ settings, updateSettings }: SettingsProps): JSX.Element {
+export function SettingsScreen({ settings, updateSettings, theme, setTheme }: SettingsProps): JSX.Element {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="p-6 max-w-2xl space-y-8">
@@ -23,6 +51,42 @@ export function SettingsScreen({ settings, updateSettings }: SettingsProps): JSX
             These settings apply to all chat conversations.
           </p>
         </div>
+
+        <Separator />
+
+        {/* Appearance */}
+        <section className="space-y-3">
+          <div>
+            <Label>Appearance</Label>
+            <p className="text-xs text-muted-foreground mt-1">Choose a colour theme for the app.</p>
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTheme(t.id)}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-28',
+                  theme === t.id
+                    ? 'border-primary shadow-sm'
+                    : 'border-border hover:border-muted-foreground'
+                )}
+              >
+                {/* Mini preview */}
+                <div
+                  className="w-16 h-10 rounded-lg overflow-hidden flex items-end justify-end p-1.5 shadow-inner"
+                  style={{ background: t.bg, border: `1px solid ${t.card}` }}
+                >
+                  <div
+                    className="w-6 h-4 rounded"
+                    style={{ background: t.primary }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-foreground">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <Separator />
 

@@ -27,8 +27,9 @@
   --radius: 0.5rem;
 }
 
-/* Dark theme — full color values (not just HSL components) */
-:root {
+/* ── Dark theme (default) ───────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
   --background: hsl(222.2 84% 4.9%);
   --foreground: hsl(210 40% 98%);
   --card: hsl(220 40% 7%);
@@ -48,6 +49,52 @@
   --border: hsl(217.2 32.6% 20%);
   --input: hsl(217.2 32.6% 20%);
   --ring: hsl(212.7 26.8% 83.9%);
+}
+
+/* ── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --card: hsl(210 20% 98%);
+  --card-foreground: hsl(222.2 84% 4.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222.2 84% 4.9%);
+  --primary: hsl(222.2 47.4% 30%);
+  --primary-foreground: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 93%);
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --muted: hsl(210 40% 96%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(210 40% 92%);
+  --accent-foreground: hsl(222.2 84% 4.9%);
+  --destructive: hsl(0 72.2% 50.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(214.3 31.8% 85%);
+  --input: hsl(214.3 31.8% 85%);
+  --ring: hsl(222.2 47.4% 40%);
+}
+
+/* ── Cherry Blossom theme ───────────────────────────────────────────────── */
+[data-theme="cherry"] {
+  --background: hsl(345 60% 98%);
+  --foreground: hsl(340 25% 12%);
+  --card: hsl(345 45% 96%);
+  --card-foreground: hsl(340 25% 12%);
+  --popover: hsl(345 60% 98%);
+  --popover-foreground: hsl(340 25% 12%);
+  --primary: hsl(340 65% 52%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(345 35% 90%);
+  --secondary-foreground: hsl(340 25% 12%);
+  --muted: hsl(345 30% 93%);
+  --muted-foreground: hsl(340 15% 45%);
+  --accent: hsl(345 40% 88%);
+  --accent-foreground: hsl(340 25% 12%);
+  --destructive: hsl(0 72% 50%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(340 28% 82%);
+  --input: hsl(340 28% 82%);
+  --ring: hsl(340 65% 52%);
 }
 
 *, *::before, *::after {
