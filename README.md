@@ -4,7 +4,7 @@
   <img src="build/icon.png" alt="HomeMind logo" width="180" />
 </p>
 
-Are you curious about AI, but it seems to serve someone else's best interest? HomeMind helps you set up your own personal AI, running on your own computer in your own home. HomeMind is a desktop app that lets you chat with large language models entirely on your own machine — no cloud, no signups, no data leaving your device.
+Are you curious about AI, but worry it seems to serve someone else's best interest? HomeMind helps you set up your own personal AI, running on your own computer in your own home. HomeMind is a desktop app that lets you chat with large language models entirely on your own machine — no cloud, no signups, no data leaving your device.
 
 Built with Electron, React, TypeScript, and [Ollama](https://ollama.com).
 
