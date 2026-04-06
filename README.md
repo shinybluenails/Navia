@@ -50,7 +50,7 @@ Head to the [latest release](https://github.com/shinybluenails/homemind/releases
 - ~4 GB free disk space for a small model (e.g. Llama 3.2 1B = 1.3 GB)
 - 8 GB RAM recommended; 16 GB+ for larger models
 
-## Getting Started
+## Hacking on HomeMind
 
 ### 1. Install dependencies
 
