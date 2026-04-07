@@ -8,13 +8,13 @@ export interface Settings {
 }
 
 const DEFAULTS: Settings = {
-  systemPrompt: 'You are a helpful assistant.',
+  systemPrompt: 'You are Navia, a friendly and helpful personal AI assistant.',
   temperature: 0.7,
   numCtx: 2048,
   numGpu: 0
 }
 
-const STORAGE_KEY = 'homemind-settings'
+const STORAGE_KEY = 'navia-settings'
 
 export function useSettings(): { settings: Settings; updateSettings: (updates: Partial<Settings>) => void } {
   const [settings, setSettings] = useState<Settings>(() => {

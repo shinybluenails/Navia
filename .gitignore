@@ -7,3 +7,6 @@ out
 # Ollama binaries — downloaded by CI and locally via scripts, not stored in git
 resources/win32/
 resources/darwin/
+
+# Generated icon sizes — reproducible from build/icon.png
+icons/png/

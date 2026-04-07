@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { readFileSync, writeFileSync, unlinkSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
@@ -32,7 +33,45 @@ function setupAutoUpdater(mainWindow: BrowserWindow): void {
   }, 4 * 60 * 60 * 1000)
 }
 
+function createSplash(): BrowserWindow {
+  const splash = new BrowserWindow({
+    width: 300,
+    height: 300,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    center: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    ...(process.platform !== 'darwin' ? { icon } : {})
+  })
+
+  // Write splash HTML to a temp file so loadFile can serve the base64 image
+  // without hitting Chromium's data: URL size limit
+  const iconBase64 = readFileSync(icon).toString('base64')
+  const tmpPath = join(app.getPath('temp'), 'navia-splash.html')
+  writeFileSync(tmpPath, `<!DOCTYPE html>
+<html>
+<head><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 300px; height: 300px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    -webkit-app-region: drag;
+  }
+  img { width: 200px; height: 200px; border-radius: 32px; }
+</style></head>
+<body><img src="data:image/png;base64,${iconBase64}" /></body>
+</html>`)
+  splash.loadFile(tmpPath)
+
+  return splash
+}
+
 function createWindow(): void {
+  const splash = createSplash()
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -49,6 +88,8 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    splash.close()
+    try { unlinkSync(join(app.getPath('temp'), 'navia-splash.html')) } catch { /* ignore */ }
     mainWindow.show()
   })
 
@@ -71,7 +112,7 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.homemind.app')
+  electronApp.setAppUserModelId('com.navia.app')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

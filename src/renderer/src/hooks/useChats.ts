@@ -15,8 +15,8 @@ export interface ChatSession {
   updatedAt: number
 }
 
-const CHATS_KEY = 'homemind-chats'
-const ACTIVE_KEY = 'homemind-active-chat'
+const CHATS_KEY = 'navia-chats'
+const ACTIVE_KEY = 'navia-active-chat'
 
 function loadChats(): ChatSession[] {
   try {

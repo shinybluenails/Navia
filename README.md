@@ -1,14 +1,14 @@
-# HomeMind
+# Navia
 
 <p align="center">
-  <img src="build/icon.png" alt="HomeMind logo" width="180" />
+  <img src="build/icon.png" alt="Navia logo" width="180" />
 </p>
 
-Are you curious about AI, but worry that it seems to serve someone else's best interest? HomeMind helps you set up your own personal AI, running on your own computer in your own home. HomeMind is a desktop app that lets you chat with large language models entirely on your own machine — no cloud, no signups, no data leaving your device.
+Are you curious about AI, but worry that it seems to serve someone else's best interest? Navia is your personal AI assistant and guide, running on your own computer. Navia is a desktop app that lets you chat with large language models entirely on your own machine — no cloud, no signups, no data leaving your device.
 
 Built with Electron, React, TypeScript, and [Ollama](https://ollama.com).
 
-Here is what some influential people have to say about the HomeMind project:
+Here is what some influential people have to say about the Navia project:
 
 > Power to the people!
 
@@ -28,18 +28,18 @@ Here is what some influential people have to say about the HomeMind project:
 
 ## Download & Install
 
-Head to the [latest release](https://github.com/shinybluenails/homemind/releases/latest) and grab the installer for your platform.
+Head to the [latest release](https://github.com/shinybluenails/navia/releases/latest) and grab the installer for your platform.
 
 ### Windows
 
-1. Download `homemind-x.x.x-setup.exe`
+1. Download `navia-x.x.x-setup.exe`
 2. Run the installer and follow the prompts
-3. Launch HomeMind from the Start menu or desktop shortcut
+3. Launch Navia from the Start menu or desktop shortcut
 
 ### macOS
 
-1. Download `homemind-x.x.x.dmg`
-2. Open the `.dmg` and drag HomeMind to your **Applications** folder
+1. Download `navia-x.x.x.dmg`
+2. Open the `.dmg` and drag Navia to your **Applications** folder
 3. On first launch, right-click the app and choose **Open**
 
 > macOS may block the app on first run since it isn't notarized. If you see a "can't be opened" message, go to **System Settings → Privacy & Security** and click **Open Anyway**.
@@ -50,7 +50,7 @@ Head to the [latest release](https://github.com/shinybluenails/homemind/releases
 - ~4 GB free disk space for a small model (e.g. Llama 3.2 1B = 1.3 GB)
 - 8 GB RAM recommended; 16 GB+ for larger models
 
-## Hacking on HomeMind
+## Hacking on Navia
 
 ### 1. Install dependencies
 

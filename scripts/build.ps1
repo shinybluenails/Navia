@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Build tool for HomeMind.
+    Build tool for Navia.
 
 .DESCRIPTION
     Wraps common pnpm scripts with colored output and error handling.
@@ -52,7 +52,7 @@ function Invoke-PnpmTask([string]$Script, [string]$Label) {
 
 function Show-Help {
     Write-Host ""
-    Write-Host "  HomeMind Build Tool" -ForegroundColor Cyan
+    Write-Host "  Navia Build Tool" -ForegroundColor Cyan
     Write-Host "  ───────────────────" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Usage:  .\scripts\build.ps1 <task>" -ForegroundColor White

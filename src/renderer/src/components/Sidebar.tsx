@@ -50,15 +50,6 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
   return (
     <aside className="w-56 shrink-0 flex flex-col border-r border-border bg-card h-full">
-      {/* Brand header */}
-      <div className="flex items-center justify-center px-4 py-4 border-b border-border shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-          <span className="text-primary-foreground font-bold text-sm tracking-tight select-none">
-            Hm
-          </span>
-        </div>
-      </div>
-
       {/* New Chat button */}
       <div className="px-2 pt-2 shrink-0">
         <button

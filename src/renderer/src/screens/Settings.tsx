@@ -12,6 +12,13 @@ const CTX_PRESETS = [512, 1024, 2048, 4096, 8192, 16384, 32768]
 
 const THEMES: { id: Theme; label: string; bg: string; primary: string; card: string }[] = [
   {
+    id: 'forest',
+    label: 'Forest',
+    bg: 'hsl(120 20% 97%)',
+    card: 'hsl(120 18% 94%)',
+    primary: 'hsl(138 45% 35%)'
+  },
+  {
     id: 'dark',
     label: 'Dark',
     bg: 'hsl(222.2 84% 4.9%)',

@@ -74,6 +74,29 @@
   --ring: hsl(222.2 47.4% 40%);
 }
 
+/* ── Forest theme (default) ────────────────────────────────────────────── */
+[data-theme="forest"] {
+  --background: hsl(120 20% 97%);
+  --foreground: hsl(130 25% 10%);
+  --card: hsl(120 18% 94%);
+  --card-foreground: hsl(130 25% 10%);
+  --popover: hsl(120 20% 97%);
+  --popover-foreground: hsl(130 25% 10%);
+  --primary: hsl(138 45% 35%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(120 20% 88%);
+  --secondary-foreground: hsl(130 25% 10%);
+  --muted: hsl(120 15% 91%);
+  --muted-foreground: hsl(130 12% 42%);
+  --accent: hsl(120 22% 86%);
+  --accent-foreground: hsl(130 25% 10%);
+  --destructive: hsl(0 68% 48%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(125 18% 80%);
+  --input: hsl(125 18% 80%);
+  --ring: hsl(138 45% 35%);
+}
+
 /* ── Cherry Blossom theme ───────────────────────────────────────────────── */
 [data-theme="cherry"] {
   --background: hsl(345 60% 98%);

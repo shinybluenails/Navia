@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 
-export type Theme = 'dark' | 'light' | 'cherry'
+export type Theme = 'dark' | 'light' | 'cherry' | 'forest'
 
-const STORAGE_KEY = 'homemind-theme'
-const DEFAULT: Theme = 'dark'
+const STORAGE_KEY = 'navia-theme'
+const DEFAULT: Theme = 'forest'
 
 function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme)
@@ -12,7 +12,7 @@ function applyTheme(theme: Theme): void {
 function loadTheme(): Theme {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw === 'dark' || raw === 'light' || raw === 'cherry') return raw
+    if (raw === 'dark' || raw === 'light' || raw === 'cherry' || raw === 'forest') return raw
   } catch {
     // ignore
   }

@@ -1,11 +1,11 @@
 {
-  "name": "homemind",
+  "name": "navia",
   "version": "1.0.0",
   "description": "Your personal AI, running at home",
   "main": "./out/main/index.js",
   "author": "shinybluenails",
   "license": "MIT",
-  "homepage": "https://github.com/shinybluenails/homemind",
+  "homepage": "https://github.com/shinybluenails/navia",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",

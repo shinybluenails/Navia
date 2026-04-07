@@ -1,5 +1,5 @@
-appId: com.homemind.app
-productName: HomeMind
+appId: com.navia.app
+productName: Navia
 directories:
   buildResources: build
 files:
@@ -19,7 +19,7 @@ publish:
   provider: github
   releaseType: release
 win:
-  executableName: HomeMind
+  executableName: Navia
   sign: null
   extraResources:
     - from: resources/win32
