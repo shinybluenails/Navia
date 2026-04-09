@@ -1,8 +1,8 @@
-import { Package, Settings2, Plus, Trash2, MessageSquare } from 'lucide-react'
+import { Package, Settings2, Plus, Trash2, MessageSquare, CheckSquare } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import type { ChatSession } from '@renderer/hooks/useChats'
 
-export type Screen = 'chat' | 'models' | 'settings'
+export type Screen = 'chat' | 'models' | 'settings' | 'tasks'
 
 interface NavItemProps {
   icon: React.ReactNode
@@ -103,6 +103,13 @@ export function Sidebar({
 
       {/* Bottom nav */}
       <div className="p-2 border-t border-border shrink-0 flex flex-col gap-0.5">
+        <NavItem
+          icon={<CheckSquare className="w-4 h-4 shrink-0" />}
+          label="Tasks"
+          screen="tasks"
+          active={active === 'tasks'}
+          onClick={onNavigate}
+        />
         <NavItem
           icon={<Package className="w-4 h-4 shrink-0" />}
           label="Models"

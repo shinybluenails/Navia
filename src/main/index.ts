@@ -5,7 +5,56 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { startOllama, stopOllama } from './ollama-process'
-import { listModels, deleteModel, pullModel, chat } from './ollama-client'
+import { listModels, deleteModel, pullModel, chat, ChatMessage, OllamaToolCall, modelSupportsTools } from './ollama-client'
+import { getTools, hasTool, executeTool } from './tools/registry'
+import { McpClient, mcpToolToOllama } from './mcp/client'
+import {
+  listTodos, createTodo, updateTodo, deleteTodo,
+  listMemory, writeMemory, readMemory, deleteMemory,
+  listMcpServers, addMcpServer, updateMcpServer, removeMcpServer,
+  type Todo, type McpServer
+} from './store'
+
+// ── MCP client lifecycle ──────────────────────────────────────────────────────
+
+const mcpClients = new Map<string, McpClient>()
+
+async function connectMcpServer(server: McpServer): Promise<void> {
+  try {
+    const client = new McpClient(server.id, server.name, server.command, server.args)
+    await client.connect()
+    mcpClients.set(server.id, client)
+    console.log(`[mcp] Connected "${server.name}" — ${client.tools().length} tools`)
+  } catch (err) {
+    console.error(`[mcp] Failed to connect "${server.name}":`, err)
+  }
+}
+
+function disconnectMcpServer(id: string): void {
+  const client = mcpClients.get(id)
+  if (client) {
+    client.disconnect()
+    mcpClients.delete(id)
+  }
+}
+
+function mcpServerStatus(server: McpServer) {
+  const client = mcpClients.get(server.id)
+  return {
+    ...server,
+    connected: client?.connected ?? false,
+    toolCount: client?.tools().length ?? 0
+  }
+}
+
+async function executeMcpTool(name: string, args: Record<string, unknown>): Promise<string> {
+  for (const client of mcpClients.values()) {
+    if (client.connected && client.tools().some((t) => t.name === name)) {
+      return client.call(name, args)
+    }
+  }
+  throw new Error(`Unknown tool: ${name}`)
+}
 
 function setupAutoUpdater(mainWindow: BrowserWindow): void {
   // Don't check for updates in development
@@ -124,6 +173,11 @@ app.whenReady().then(() => {
   // Start Ollama before showing the window
   startOllama().catch((err) => console.error('[ollama] Failed to start:', err))
 
+  // Connect enabled MCP servers
+  for (const server of listMcpServers().filter((s) => s.enabled)) {
+    connectMcpServer(server).catch(console.error)
+  }
+
   // IPC: list installed models
   ipcMain.handle('ollama:list', () => listModels())
 
@@ -146,10 +200,98 @@ app.whenReady().then(() => {
       messages: { role: string; content: string }[],
       options?: { temperature?: number; num_ctx?: number; num_gpu?: number }
     ) => {
-      for await (const token of chat(model, messages as never, options)) {
-        event.sender.send('ollama:chat-token', token)
+      for await (const chatEvent of chat(model, messages as never, options)) {
+        if (chatEvent.type === 'token') {
+          event.sender.send('ollama:chat-token', chatEvent.content)
+        }
       }
       event.sender.send('ollama:chat-done')
+    }
+  )
+
+  // IPC: agent — runs a full multi-turn tool-calling loop
+  ipcMain.handle(
+    'ollama:agent',
+    async (
+      event,
+      model: string,
+      messages: ChatMessage[],
+      options?: { temperature?: number; num_ctx?: number; num_gpu?: number }
+    ) => {
+      // Gather static tools + any active MCP server tools
+      const mcpTools = [...mcpClients.values()]
+        .filter((c) => c.connected)
+        .flatMap((c) => c.tools().map(mcpToolToOllama))
+      const tools = modelSupportsTools(model) ? [...getTools(), ...mcpTools] : []
+      const MAX_ITERATIONS = 10
+
+      // Inject stored memories and open todos into the system prompt
+      const memories = listMemory()
+      const openTodos = listTodos().filter((t) => t.status !== 'done')
+      const runMessages: ChatMessage[] = messages.map((msg) => {
+        if (msg.role !== 'system') return msg
+        let extra = ''
+        if (memories.length > 0) {
+          extra += '\n\n---\nWhat you know about the user:\n' +
+            memories.map((e) => `- ${e.key}: ${e.value}`).join('\n')
+        }
+        if (openTodos.length > 0) {
+          extra += '\n\n---\nUser\'s open tasks:\n' +
+            openTodos
+              .map((t) => `- [${t.id.slice(0, 8)}] (${t.priority}) ${t.title}${t.dueDate ? ` — due ${t.dueDate}` : ''}`)
+              .join('\n')
+        }
+        return extra ? { ...msg, content: msg.content + extra } : msg
+      })
+
+      for (let i = 0; i < MAX_ITERATIONS; i++) {
+        let toolCallsFromTurn: OllamaToolCall[] | null = null
+
+        for await (const chatEvent of chat(model, runMessages, { ...options, tools })) {
+          if (chatEvent.type === 'token') {
+            event.sender.send('ollama:agent-token', chatEvent.content)
+          } else if (chatEvent.type === 'tool_calls') {
+            toolCallsFromTurn = chatEvent.calls
+          }
+        }
+
+        // No tool calls — model produced a final response; we're done
+        if (!toolCallsFromTurn || toolCallsFromTurn.length === 0) {
+          return
+        }
+
+        // Append the assistant's tool-calling message to history
+        runMessages.push({ role: 'assistant', content: '', tool_calls: toolCallsFromTurn })
+
+        // Execute each tool call
+        for (const call of toolCallsFromTurn) {
+          const toolName = call.function.name
+          const toolArgs = call.function.arguments
+
+          event.sender.send('ollama:agent-step', { type: 'tool-call', toolName, args: toolArgs })
+
+          let result: string
+          try {
+            result = hasTool(toolName)
+              ? await executeTool(toolName, toolArgs)
+              : await executeMcpTool(toolName, toolArgs)
+          } catch (err) {
+            result = `Error: ${String(err)}`
+          }
+
+          event.sender.send('ollama:agent-step', { type: 'tool-result', toolName, result })
+
+          // Append the tool result to history
+          runMessages.push({ role: 'tool', content: result })
+        }
+      }
+
+      // Reached max iterations
+      event.sender.send('ollama:agent-step', {
+        type: 'error',
+        toolName: '',
+        message: 'Maximum tool iterations reached'
+      })
     }
   )
 
@@ -159,6 +301,53 @@ app.whenReady().then(() => {
   ipcMain.on('update:install', () => {
     stopOllama()
     autoUpdater.quitAndInstall()
+  })
+
+  // IPC: todos — broadcast todos:changed after every mutation so the renderer stays in sync
+  ipcMain.handle('todo:list', () => listTodos())
+  ipcMain.handle('todo:create', async (event, data: Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const todo = createTodo(data)
+    event.sender.send('todos:changed')
+    return todo
+  })
+  ipcMain.handle('todo:update', async (event, id: string, changes: Partial<Omit<Todo, 'id' | 'createdAt'>>) => {
+    const todo = updateTodo(id, changes)
+    event.sender.send('todos:changed')
+    return todo
+  })
+  ipcMain.handle('todo:delete', async (event, id: string) => {
+    deleteTodo(id)
+    event.sender.send('todos:changed')
+  })
+
+  // IPC: memory
+  ipcMain.handle('memory:list', () => listMemory())
+  ipcMain.handle('memory:write', (_e, key: string, value: string, category?: string) => writeMemory(key, value, category))
+  ipcMain.handle('memory:read', (_e, key: string) => readMemory(key))
+  ipcMain.handle('memory:delete', (_e, key: string) => deleteMemory(key))
+
+  // IPC: MCP server management
+  ipcMain.handle('mcp:list', () => listMcpServers().map(mcpServerStatus))
+
+  ipcMain.handle('mcp:add', async (_e, data: Omit<McpServer, 'id'>) => {
+    const server = addMcpServer(data)
+    if (server.enabled) await connectMcpServer(server)
+    return mcpServerStatus(server)
+  })
+
+  ipcMain.handle('mcp:remove', (_e, id: string) => {
+    disconnectMcpServer(id)
+    removeMcpServer(id)
+  })
+
+  ipcMain.handle('mcp:toggle', async (_e, id: string, enabled: boolean) => {
+    const server = updateMcpServer(id, { enabled })
+    if (enabled) {
+      await connectMcpServer(server)
+    } else {
+      disconnectMcpServer(id)
+    }
+    return mcpServerStatus(server)
   })
 
   createWindow()

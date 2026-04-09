@@ -36,10 +36,22 @@ async function isOllamaRunning(): Promise<boolean> {
 }
 
 export async function startOllama(): Promise<void> {
-  // If something is already listening on the port, use it (user may have Ollama installed)
+  // If something is already listening on the port, kill it first so we own
+  // the process and can clean it up on exit.
   if (await isOllamaRunning()) {
-    console.log('[ollama] Already running on port', OLLAMA_PORT)
-    return
+    console.log('[ollama] Already running on port', OLLAMA_PORT, '— taking ownership')
+    // Try to kill whatever is on the port (best-effort on Windows)
+    if (process.platform === 'win32') {
+      const { exec } = await import('child_process')
+      exec(`for /f "tokens=5" %a in ('netstat -aon ^| findstr :${OLLAMA_PORT}') do taskkill /F /PID %a`, () => {})
+    }
+    // Wait briefly for it to die, then fall through to spawn
+    await new Promise((r) => setTimeout(r, 1500))
+    if (await isOllamaRunning()) {
+      // Still up — reuse it but warn we can't stop it on exit
+      console.log('[ollama] Could not take ownership; reusing existing process')
+      return
+    }
   }
 
   const binaryPath = getOllamaBinaryPath()

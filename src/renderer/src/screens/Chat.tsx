@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, RefreshCw } from 'lucide-react'
+import { Send, RefreshCw, ChevronDown, ChevronRight, Brain } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
 import type { Settings } from '@renderer/hooks/useSettings'
 import type { ChatSession, ChatMessage } from '@renderer/hooks/useChats'
 import { MarkdownMessage } from '@renderer/components/MarkdownMessage'
+import type { AgentStep } from '../../../preload/index.d'
 
 interface ChatProps {
   settings: Settings
@@ -13,11 +14,68 @@ interface ChatProps {
   onCreateChat: (model?: string) => string
 }
 
+// ── Agent step display ───────────────────────────────────────────────────────
+
+function AgentStepCard({ step }: { step: AgentStep }): JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+
+  if (step.type === 'tool-call') {
+    const isThink = step.toolName === 'think'
+    const thought = isThink ? (step.args?.thought as string | undefined) : undefined
+    return (
+      <div className="flex justify-start">
+        <div
+          className={cn(
+            'max-w-[80%] rounded-xl px-3 py-2 text-xs border border-border bg-background text-muted-foreground',
+            isThink && 'cursor-pointer hover:bg-accent/50 transition-colors'
+          )}
+          onClick={isThink ? () => setExpanded((v) => !v) : undefined}
+        >
+          <div className="flex items-center gap-1.5">
+            <Brain className="w-3.5 h-3.5 shrink-0" />
+            <span className="font-medium">{isThink ? 'Thinking…' : `Using ${step.toolName}…`}</span>
+            {isThink && thought && (
+              <span className="ml-auto">
+                {expanded ? (
+                  <ChevronDown className="w-3 h-3" />
+                ) : (
+                  <ChevronRight className="w-3 h-3" />
+                )}
+              </span>
+            )}
+          </div>
+          {expanded && thought && (
+            <p className="mt-1.5 italic leading-relaxed border-l-2 border-border pl-2 text-foreground/70">
+              {thought}
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return <></>
+}
+
+function AgentStepList({ steps }: { steps: AgentStep[] }): JSX.Element {
+  // Only render tool-call steps (results are implicit in the collapsed card)
+  const toolCallSteps = steps.filter((s) => s.type === 'tool-call')
+  if (toolCallSteps.length === 0) return <></>
+  return (
+    <div className="space-y-1.5">
+      {toolCallSteps.map((step, i) => (
+        <AgentStepCard key={i} step={step} />
+      ))}
+    </div>
+  )
+}
+
 export function Chat({ settings, activeChat, onUpdateChat, onCreateChat }: ChatProps): JSX.Element {
   const [selectedModel, setSelectedModel] = useState(activeChat?.model ?? '')
   const [models, setModels] = useState<string[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
+  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
   const [ollamaError, setOllamaError] = useState<string | null>(null)
 
   const streamRef = useRef('')
@@ -111,6 +169,7 @@ export function Chat({ settings, activeChat, onUpdateChat, onCreateChat }: ChatP
     setIsStreaming(true)
     streamRef.current = ''
     setStreamingContent('')
+    setAgentSteps([])
 
     const apiMessages = [
       ...(settings.systemPrompt
@@ -119,13 +178,17 @@ export function Chat({ settings, activeChat, onUpdateChat, onCreateChat }: ChatP
       ...updatedMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
     ]
 
-    const cleanupToken = window.ollama.onChatToken((token) => {
+    const cleanupToken = window.ollama.onAgentToken((token) => {
       streamRef.current += token
       setStreamingContent(streamRef.current)
     })
 
+    const cleanupStep = window.ollama.onAgentStep((step) => {
+      setAgentSteps((prev) => [...prev, step])
+    })
+
     try {
-      await window.ollama.chat(selectedModel, apiMessages, {
+      await window.ollama.agent(selectedModel, apiMessages, {
         temperature: settings.temperature,
         num_ctx: settings.numCtx,
         ...(settings.numGpu !== 0 ? { num_gpu: settings.numGpu } : {})
@@ -145,6 +208,7 @@ export function Chat({ settings, activeChat, onUpdateChat, onCreateChat }: ChatP
       onUpdateChat(chatId, { messages: [...updatedMessages, errorMsg] })
     } finally {
       cleanupToken()
+      cleanupStep()
       setStreamingContent('')
       streamRef.current = ''
       setIsStreaming(false)
@@ -243,19 +307,25 @@ export function Chat({ settings, activeChat, onUpdateChat, onCreateChat }: ChatP
             </div>
           ))}
 
-          {/* Streaming message */}
+          {/* Streaming / agent steps area */}
           {isStreaming && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm bg-muted text-foreground break-words min-w-[60px] min-h-[36px]">
-                {streamingContent ? (
-                  <MarkdownMessage content={streamingContent} />
-                ) : (
-                  <span className="flex gap-1 items-center h-full">
-                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:300ms]" />
-                  </span>
-                )}
+            <div className="space-y-2">
+              {/* Agent tool-call steps */}
+              <AgentStepList steps={agentSteps} />
+
+              {/* Streaming response bubble */}
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm bg-muted text-foreground break-words min-w-[60px] min-h-[36px]">
+                    {streamingContent ? (
+                    <MarkdownMessage content={streamingContent} />
+                  ) : (
+                    <span className="flex gap-1 items-center h-full">
+                      <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:300ms]" />
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -3,6 +3,7 @@ import { Sidebar, type Screen } from '@renderer/components/Sidebar'
 import { Chat } from '@renderer/screens/Chat'
 import { Models } from '@renderer/screens/Models'
 import { SettingsScreen } from '@renderer/screens/Settings'
+import { TasksScreen } from '@renderer/screens/Tasks'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useChats } from '@renderer/hooks/useChats'
 import { useTheme } from '@renderer/hooks/useTheme'
@@ -62,6 +63,7 @@ function App(): JSX.Element {
               onCreateChat={createChat}
             />
           )}
+          {screen === 'tasks' && <TasksScreen />}
           {screen === 'models' && <Models />}
           {screen === 'settings' && (
             <SettingsScreen

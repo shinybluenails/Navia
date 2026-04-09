@@ -19,16 +19,16 @@ interface RegistryModel {
 const REGISTRY_MODELS: RegistryModel[] = [
   { name: 'llama3.2:1b', label: 'Llama 3.2 1B', description: 'Meta · Great starting point', size: '1.3 GB', tags: ['recommended', 'fast'] },
   { name: 'llama3.2:3b', label: 'Llama 3.2 3B', description: 'Meta · Good balance of speed and quality', size: '2.0 GB' },
-  { name: 'llama3.1:8b', label: 'Llama 3.1 8B', description: 'Meta · High quality responses', size: '4.7 GB' },
+  { name: 'llama3.1:8b', label: 'Llama 3.1 8B', description: 'Meta · High quality responses', size: '4.7 GB', tags: ['tool-calling'] },
   { name: 'gemma3:1b', label: 'Gemma 3 1B', description: 'Google · Tiny and fast', size: '815 MB', tags: ['fast'] },
   { name: 'gemma3:4b', label: 'Gemma 3 4B', description: 'Google · Strong performance', size: '2.5 GB' },
   { name: 'gemma3:12b', label: 'Gemma 3 12B', description: 'Google · Excellent quality', size: '7.6 GB' },
-  { name: 'phi4-mini:3.8b', label: 'Phi-4 Mini 3.8B', description: 'Microsoft · Efficient reasoning', size: '2.5 GB' },
-  { name: 'phi4:14b', label: 'Phi-4 14B', description: 'Microsoft · Advanced reasoning', size: '9.1 GB' },
-  { name: 'qwen2.5:1.5b', label: 'Qwen 2.5 1.5B', description: 'Alibaba · Multilingual support', size: '986 MB', tags: ['fast'] },
-  { name: 'qwen2.5:3b', label: 'Qwen 2.5 3B', description: 'Alibaba · Good general purpose', size: '1.9 GB' },
-  { name: 'qwen2.5:7b', label: 'Qwen 2.5 7B', description: 'Alibaba · Strong multilingual', size: '4.7 GB' },
-  { name: 'mistral:7b', label: 'Mistral 7B', description: 'Mistral AI · Fast and capable', size: '4.1 GB' },
+  { name: 'phi4-mini:3.8b', label: 'Phi-4 Mini 3.8B', description: 'Microsoft · Efficient reasoning', size: '2.5 GB', tags: ['tool-calling'] },
+  { name: 'phi4:14b', label: 'Phi-4 14B', description: 'Microsoft · Advanced reasoning', size: '9.1 GB', tags: ['tool-calling'] },
+  { name: 'qwen2.5:1.5b', label: 'Qwen 2.5 1.5B', description: 'Alibaba · Multilingual support', size: '986 MB', tags: ['fast', 'tool-calling'] },
+  { name: 'qwen2.5:3b', label: 'Qwen 2.5 3B', description: 'Alibaba · Good general purpose', size: '1.9 GB', tags: ['tool-calling'] },
+  { name: 'qwen2.5:7b', label: 'Qwen 2.5 7B', description: 'Alibaba · Strong multilingual', size: '4.7 GB', tags: ['tool-calling'] },
+  { name: 'mistral:7b', label: 'Mistral 7B', description: 'Mistral AI · Fast and capable', size: '4.1 GB', tags: ['tool-calling'] },
   { name: 'deepseek-r1:1.5b', label: 'DeepSeek R1 1.5B', description: 'DeepSeek · Reasoning model', size: '1.1 GB', tags: ['reasoning'] },
   { name: 'deepseek-r1:7b', label: 'DeepSeek R1 7B', description: 'DeepSeek · Advanced reasoning', size: '4.7 GB', tags: ['reasoning'] }
 ]
@@ -247,7 +247,13 @@ export function Models(): JSX.Element {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-foreground">{model.label}</p>
                       {model.tags?.map((tag) => (
-                        <Badge key={tag} variant="secondary">{tag}</Badge>
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className={cn(tag === 'tool-calling' && 'bg-blue-500/15 text-blue-600 border border-blue-500/20')}
+                        >
+                          {tag}
+                        </Badge>
                       ))}
                       {isInstalled && <Badge variant="outline">installed</Badge>}
                     </div>

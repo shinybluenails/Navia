@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { X } from 'lucide-react'
 import { Label } from '@renderer/components/ui/label'
 import { Textarea } from '@renderer/components/ui/textarea'
 import { Slider } from '@renderer/components/ui/slider'
@@ -5,6 +7,7 @@ import { Input } from '@renderer/components/ui/input'
 import { Separator } from '@renderer/components/ui/separator'
 import { Button } from '@renderer/components/ui/button'
 import { cn } from '@renderer/lib/utils'
+import { useMcpServers } from '@renderer/hooks/useMcpServers'
 import type { Settings } from '@renderer/hooks/useSettings'
 import type { Theme } from '@renderer/hooks/useTheme'
 
@@ -49,6 +52,25 @@ interface SettingsProps {
 }
 
 export function SettingsScreen({ settings, updateSettings, theme, setTheme }: SettingsProps): JSX.Element {
+  const { servers, add, remove, toggle } = useMcpServers()
+  const [newName, setNewName] = useState('')
+  const [newCommand, setNewCommand] = useState('')
+  const [newArgs, setNewArgs] = useState('')
+
+  async function handleAddServer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newName.trim() || !newCommand.trim()) return
+    await add({
+      name: newName.trim(),
+      command: newCommand.trim(),
+      args: newArgs.trim() ? newArgs.trim().split(/\s+/) : [],
+      enabled: true
+    })
+    setNewName('')
+    setNewCommand('')
+    setNewArgs('')
+  }
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="p-6 max-w-2xl space-y-8">
@@ -225,6 +247,101 @@ export function SettingsScreen({ settings, updateSettings, theme, setTheme }: Se
               </Button>
             </div>
           </div>
+        </section>
+
+        <Separator />
+
+        {/* MCP Servers */}
+        <section className="space-y-4">
+          <div>
+            <Label>MCP Servers</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Connect external tool servers via the Model Context Protocol. Tools from connected
+              servers are automatically available to the agent.
+            </p>
+          </div>
+
+          {/* Server list */}
+          {servers.length > 0 && (
+            <div className="space-y-2">
+              {servers.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-2 p-2.5 rounded-lg border border-border bg-card"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium truncate">{s.name}</span>
+                      <span
+                        className={cn(
+                          'text-xs px-1.5 py-0.5 rounded-full shrink-0',
+                          s.connected
+                            ? 'bg-green-500/15 text-green-600'
+                            : s.enabled
+                              ? 'bg-yellow-500/15 text-yellow-600'
+                              : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {s.connected
+                          ? `${s.toolCount} tool${s.toolCount !== 1 ? 's' : ''}`
+                          : s.enabled
+                            ? 'connecting…'
+                            : 'disabled'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5 font-mono">
+                      {s.command} {s.args.join(' ')}
+                    </p>
+                  </div>
+                  <Button
+                    variant={s.enabled ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => toggle(s.id, !s.enabled)}
+                    className="shrink-0"
+                  >
+                    {s.enabled ? 'On' : 'Off'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => remove(s.id)}
+                    className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add server form */}
+          <form onSubmit={handleAddServer} className="space-y-2">
+            <Input
+              placeholder="Server name (e.g. Brave Search)"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Command (e.g. npx, uvx)"
+                value={newCommand}
+                onChange={(e) => setNewCommand(e.target.value)}
+                className="w-36 shrink-0"
+              />
+              <Input
+                placeholder="Arguments (e.g. -y @modelcontextprotocol/server-brave-search)"
+                value={newArgs}
+                onChange={(e) => setNewArgs(e.target.value)}
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!newName.trim() || !newCommand.trim()}
+            >
+              Add Server
+            </Button>
+          </form>
         </section>
       </div>
     </div>
